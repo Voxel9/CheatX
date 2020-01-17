@@ -34,10 +34,10 @@ static HRESULT __stdcall poke_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchRe
 	code_address = strtol(code_address_buf, NULL, 16);
 	val = strtol(val_buf, NULL, 16);
 	
-	PVOID address = MmMapIoSpace(code_address, 4, PAGE_READWRITE);
-	*(DWORD*)address = val;
+	PVOID addr = MmMapIoSpace(code_address, 4, PAGE_READWRITE);
+	*(DWORD*)addr = val;
 	
-	MmUnmapIoSpace(address, 4);
+	MmUnmapIoSpace(addr, 4);
 	
 	return XBDM_NOERR;
 }
