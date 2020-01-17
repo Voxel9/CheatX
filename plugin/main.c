@@ -6,19 +6,19 @@
 #include <winapi/winbase.h>
 #include <xbdm/xbdm.h>
 
+#define PHYSICAL_ADDR_BASE	0x00000000
+#define PHYSICAL_ADDR_SIZE	0x03FFFFFF
+
 int main() { (void)KeTickCount; return 0; }
 
 static HRESULT __stdcall dump_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
 	FILE *fp = fopen("\\Device\\Harddisk0\\Partition1\\DEVKIT\\dxt\\memdump.bin", "wb");
 	
-	int physical_addr = 0x00000000;
-	int size = 0x03FFFFFF;
+	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
 	
-	PVOID addr = MmMapIoSpace(physical_addr, size, PAGE_READWRITE);
+	fwrite(addr, PHYSICAL_ADDR_SIZE, 1, fp);
 	
-	fwrite(addr, size, 1, fp);
-	
-	MmUnmapIoSpace(addr, size);
+	MmUnmapIoSpace(addr, PHYSICAL_ADDR_SIZE);
 	
 	fclose(fp);
 	
@@ -86,13 +86,10 @@ static HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchR
 	search_step = 0;
 	entries_cnt = 0;
 	
-	int physical_addr = 0x00000000;
-	int size = 0x03FFFFFF;
-	
-	PVOID addr = MmMapIoSpace(physical_addr, size, PAGE_READWRITE);
+	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
 	
 	if(strcmp(condition, "equals") == 0) {
-		for(DWORD i = 0; i < size; i += 4) {
+		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
 			if(*(DWORD*)(addr+i) == val) {
 				fwrite(&i, sizeof(DWORD), 1, fp);
 				fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
@@ -103,7 +100,7 @@ static HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchR
 	
 	sprintf(szResp, "%d entries found.", entries_cnt);
 	
-	MmUnmapIoSpace(addr, size);
+	MmUnmapIoSpace(addr, PHYSICAL_ADDR_SIZE);
 	
 	fclose(fp);
 	
@@ -128,10 +125,7 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	remove(prevpath);
 	FILE *fp = fopen(fpath, "wb");
 	
-	int physical_addr = 0x00000000;
-	int size = 0x03FFFFFF;
-	
-	PVOID addr = MmMapIoSpace(physical_addr, size, PAGE_READWRITE);
+	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
 	
 	int new_entries_cnt = 0;
 	
@@ -154,7 +148,7 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	
 	sprintf(szResp, "%d entries found.", new_entries_cnt);
 	
-	MmUnmapIoSpace(addr, size);
+	MmUnmapIoSpace(addr, PHYSICAL_ADDR_SIZE);
 	
 	fclose(fp);
 	fclose(fprevscan);
