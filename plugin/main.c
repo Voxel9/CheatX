@@ -80,7 +80,6 @@ static HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchR
 	
 	val = strtol(val_buf, NULL, 16);
 	
-	remove("\\Device\\Harddisk0\\Partition1\\DEVKIT\\dxt\\search0.bin");
 	FILE *fp = fopen("\\Device\\Harddisk0\\Partition1\\DEVKIT\\dxt\\search0.bin", "wb");
 	
 	search_step = 0;
@@ -122,7 +121,6 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	FILE *fprevscan = fopen(prevpath, "rb");
 	
 	sprintf(fpath, "\\Device\\Harddisk0\\Partition1\\DEVKIT\\dxt\\search%d.bin", search_step);
-	remove(prevpath);
 	FILE *fp = fopen(fpath, "wb");
 	
 	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
