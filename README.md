@@ -25,6 +25,3 @@ make
 ```
 
 Then place the resulting DXT from the `bin` folder into `E:\devkit\dxt` on your Xbox HDD.
-
-## Roadmap
-See [projects](https://github.com/Voxel9/CheatX/projects).
