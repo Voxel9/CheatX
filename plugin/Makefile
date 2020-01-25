@@ -1,7 +1,7 @@
 NXDK_DIR = $(CURDIR)/../../nxdk
 
 DXT_TITLE = CheatX
-SRCS = main.c
+SRCS = main.c XbSymbolDatabase/XbSymbolDatabase.c
 
 DEBUG = n
 

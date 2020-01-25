@@ -6,6 +6,8 @@
 #include <winapi/winbase.h>
 #include <xbdm/xbdm.h>
 
+#include "XbSymbolDatabase/XbSymbolDatabase.h"
+
 #define PHYSICAL_ADDR_BASE	0x00000000
 #define PHYSICAL_ADDR_SIZE	0x03FFFFFF
 
@@ -292,7 +294,59 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	return XBDM_NOERR;
 }
 
+unsigned int xrefs_cnt = 0;
+unsigned int has_this_func_even_been_called = 0;
+
+// Simple function to check xrefs are being scanned properly
+static HRESULT __stdcall symbolz(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
+	sprintf(szResp, "Num of xrefs: %u\nNum of scan func calls: %u", xrefs_cnt, has_this_func_even_been_called);
+	
+	return XBDM_NOERR;
+}
+
+VOID CDECL scanned_func(const char* library_str, uint32_t library_flag, const char* symbol_str, uint32_t func_addr, uint32_t revision) {
+	has_this_func_even_been_called++;
+}
+
 static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext) {
+	// Temp sleep to ensure XBE gets fully loaded before scan
+	XSleep(3000);
+	
+	// Step 1 & 2
+	XbSDBLibraryHeader lib_header;
+	XbSDBSectionHeader sec_header;
+	
+	lib_header.count = XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, NULL);
+	sec_header.count = XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, NULL, true);
+	
+	lib_header.filters = malloc(lib_header.count * sizeof(XbSDBLibrary));
+	sec_header.filters = malloc(sec_header.count * sizeof(XbSDBSection));
+	
+	XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, &lib_header);
+	XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, &sec_header, true);
+	
+	// Step 3
+	uint32_t thunk_addr = XbSymbolDatabase_GetKernelThunkAddress((PVOID)0x00010000);
+	// Step 4a
+	XbSymbolContextHandle xapi_handle;
+	
+	if(!XbSymbolDatabase_CreateXbSymbolContext(&xapi_handle, scanned_func, lib_header, sec_header, thunk_addr)) {
+		XReboot();
+	}
+	// Step 4b
+	XbSymbolContext_RegisterLibrary(xapi_handle, XbSymbolLib_XAPILIB);
+	// Step 5
+	XbSymbolContext_ScanManual(xapi_handle);
+	// Step 6
+	xrefs_cnt = XbSymbolContext_ScanLibrary(xapi_handle, lib_header.filters, true);
+	// Step 7
+	XbSymbolContext_RegisterXRefs(xapi_handle);
+	// Step 8
+	XbSymbolContext_Release(xapi_handle);
+	
+	free(sec_header.filters);
+	free(lib_header.filters);
+	
 	while(1) {
 		XSleep(100);
 		
@@ -308,6 +362,8 @@ void DxtEntry(ULONG *pfUnload) {
 	DmRegisterCommandProcessor("FREEZEMEM", freeze_memory);
 	DmRegisterCommandProcessor("STARTSEARCH", start_search);
 	DmRegisterCommandProcessor("CONTSEARCH", continue_search);
+	
+	DmRegisterCommandProcessor("SYMBOLZ", symbolz);
 	
 	HANDLE handle, id;
 	NTSTATUS status = PsCreateSystemThreadEx(&handle, 0, 8192, 0, &id, (PKSTART_ROUTINE)NULL, (PVOID)NULL, FALSE, FALSE, cheat_thread);
