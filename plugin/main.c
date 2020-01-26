@@ -316,7 +316,7 @@ typedef struct _XINPUT_STATE {
 } XINPUT_STATE, *PXINPUT_STATE;
 
 // CheatX hooked input state
-XINPUT_STATE pad_state;
+XINPUT_GAMEPAD pad;
 
 uint32_t getstate_raw = 0;
 BYTE oldBytes[6] = {0};
@@ -328,6 +328,9 @@ DWORD Hook_XInputGetState(HANDLE hDevice, PXINPUT_STATE pState) {
 	memcpy((PVOID)getstate_raw, oldBytes, 6);
 	DWORD ret = Loc_XInputGetState(hDevice, pState);
 	memcpy((PVOID)getstate_raw, JMP, 6);
+	
+	memcpy(&pad, &pState->Gamepad, sizeof(XINPUT_GAMEPAD));
+	
 	return ret;
 }
 
