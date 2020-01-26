@@ -6,6 +6,7 @@
 #include <winapi/winbase.h>
 #include <xbdm/xbdm.h>
 
+#define __STDC_NO_THREADS__
 #include "XbSymbolDatabase/XbSymbolDatabase.h"
 
 #define PHYSICAL_ADDR_BASE	0x00000000
@@ -294,23 +295,30 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	return XBDM_NOERR;
 }
 
-unsigned int xrefs_cnt = 0;
-unsigned int has_this_func_even_been_called = 0;
-
-// Simple function to check xrefs are being scanned properly
-static HRESULT __stdcall symbolz(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
-	sprintf(szResp, "Num of xrefs: %u\nNum of scan func calls: %u", xrefs_cnt, has_this_func_even_been_called);
-	
-	return XBDM_NOERR;
-}
+bool first_scan = true;
 
 VOID CDECL scanned_func(const char* library_str, uint32_t library_flag, const char* symbol_str, uint32_t func_addr, uint32_t revision) {
-	has_this_func_even_been_called++;
+	uint32_t cert_addr = *(DWORD*)0x00010118;
+	
+	// Debug Stuff
+	FILE *fp = fopen("\\Device\\Harddisk0\\Partition1\\DEVKIT\\dxt\\scan.txt", "a");
+	
+	if(first_scan) {
+		fprintf(fp, "\nTitle ID: 0x%08x\n", *(DWORD*)(cert_addr + 0x8));
+		first_scan = false;
+	}
+	
+	fprintf(fp, "%s - 0x%08x\n", symbol_str, func_addr);
+	
+	fclose(fp);
+	// End Debug Stuff
 }
 
 static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext) {
 	// Temp sleep to ensure XBE gets fully loaded before scan
-	XSleep(3000);
+	XSleep(1000);
+	
+	// Begin Scanning for symbols
 	
 	// Step 1 & 2
 	XbSDBLibraryHeader lib_header;
@@ -333,12 +341,10 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	if(!XbSymbolDatabase_CreateXbSymbolContext(&xapi_handle, scanned_func, lib_header, sec_header, thunk_addr)) {
 		XReboot();
 	}
-	// Step 4b
-	XbSymbolContext_RegisterLibrary(xapi_handle, XbSymbolLib_XAPILIB);
 	// Step 5
 	XbSymbolContext_ScanManual(xapi_handle);
 	// Step 6
-	xrefs_cnt = XbSymbolContext_ScanLibrary(xapi_handle, lib_header.filters, true);
+	XbSymbolContext_ScanLibrary(xapi_handle, lib_header.filters, true);
 	// Step 7
 	XbSymbolContext_RegisterXRefs(xapi_handle);
 	// Step 8
@@ -362,8 +368,6 @@ void DxtEntry(ULONG *pfUnload) {
 	DmRegisterCommandProcessor("FREEZEMEM", freeze_memory);
 	DmRegisterCommandProcessor("STARTSEARCH", start_search);
 	DmRegisterCommandProcessor("CONTSEARCH", continue_search);
-	
-	DmRegisterCommandProcessor("SYMBOLZ", symbolz);
 	
 	HANDLE handle, id;
 	NTSTATUS status = PsCreateSystemThreadEx(&handle, 0, 8192, 0, &id, (PKSTART_ROUTINE)NULL, (PVOID)NULL, FALSE, FALSE, cheat_thread);
