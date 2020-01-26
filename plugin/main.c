@@ -295,6 +295,42 @@ static HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD c
 	return XBDM_NOERR;
 }
 
+// Xbox XInput structs, taken from Cxbx-Reloaded
+// (https://github.com/Cxbx-Reloaded/Cxbx-Reloaded/blob/develop/src/core/hle/XAPI/Xapi.h)
+
+typedef struct _XINPUT_GAMEPAD {
+	WORD    wButtons;
+	BYTE    bAnalogButtons[8];
+	SHORT   sThumbLX;
+	SHORT   sThumbLY;
+	SHORT   sThumbRX;
+	SHORT   sThumbRY;
+} XINPUT_GAMEPAD, *PXINPUT_GAMEPAD;
+
+typedef struct _XINPUT_STATE {
+	DWORD dwPacketNumber;
+	
+	union {
+		XINPUT_GAMEPAD Gamepad;
+	};
+} XINPUT_STATE, *PXINPUT_STATE;
+
+// CheatX hooked input state
+XINPUT_STATE pad_state;
+
+uint32_t getstate_raw = 0;
+BYTE oldBytes[6] = {0};
+BYTE JMP[6] = {0};
+
+DWORD Hook_XInputGetState(HANDLE hDevice, PXINPUT_STATE pState) {
+	DWORD (*Loc_XInputGetState)(HANDLE, PXINPUT_STATE) = (PVOID)getstate_raw;
+	
+	memcpy((PVOID)getstate_raw, oldBytes, 6);
+	DWORD ret = Loc_XInputGetState(hDevice, pState);
+	memcpy((PVOID)getstate_raw, JMP, 6);
+	return ret;
+}
+
 bool first_scan = true;
 
 VOID CDECL scanned_func(const char* library_str, uint32_t library_flag, const char* symbol_str, uint32_t func_addr, uint32_t revision) {
@@ -312,6 +348,20 @@ VOID CDECL scanned_func(const char* library_str, uint32_t library_flag, const ch
 	
 	fclose(fp);
 	// End Debug Stuff
+	
+	if(strcmp("XInputGetState", symbol_str) == 0) {
+		getstate_raw = func_addr;
+	}
+}
+
+static VOID InstallGetStateHook() {
+	BYTE tempJMP[6] = {0xE9, 0x90, 0x90, 0x90, 0x90, 0xC3};
+	
+	memcpy(JMP, tempJMP, 6);
+	DWORD JMPSize = ((DWORD)Hook_XInputGetState - getstate_raw - 5);
+	memcpy(oldBytes, (PVOID)getstate_raw, 6);
+	memcpy(&JMP[1], &JMPSize, 4);
+	memcpy((PVOID)getstate_raw, JMP, 6);
 }
 
 static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext) {
@@ -325,13 +375,13 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	XbSDBSectionHeader sec_header;
 	
 	lib_header.count = XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, NULL);
-	sec_header.count = XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, NULL, true);
+	sec_header.count = XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, NULL, false);
 	
 	lib_header.filters = malloc(lib_header.count * sizeof(XbSDBLibrary));
 	sec_header.filters = malloc(sec_header.count * sizeof(XbSDBSection));
 	
 	XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, &lib_header);
-	XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, &sec_header, true);
+	XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, &sec_header, false);
 	
 	// Step 3
 	uint32_t thunk_addr = XbSymbolDatabase_GetKernelThunkAddress((PVOID)0x00010000);
@@ -352,6 +402,8 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	
 	free(sec_header.filters);
 	free(lib_header.filters);
+	
+	InstallGetStateHook();
 	
 	while(1) {
 		XSleep(100);
