@@ -322,8 +322,8 @@ uint32_t getstate_raw = 0;
 BYTE oldBytes[6] = {0};
 BYTE JMP[6] = {0};
 
-DWORD Hook_XInputGetState(HANDLE hDevice, PXINPUT_STATE pState) {
-	DWORD (*Loc_XInputGetState)(HANDLE, PXINPUT_STATE) = (PVOID)getstate_raw;
+DWORD WINAPI Hook_XInputGetState(HANDLE hDevice, PXINPUT_STATE pState) {
+	DWORD WINAPI (*Loc_XInputGetState)(HANDLE, PXINPUT_STATE) = (PVOID)getstate_raw;
 	
 	memcpy((PVOID)getstate_raw, oldBytes, 6);
 	DWORD ret = Loc_XInputGetState(hDevice, pState);
@@ -410,6 +410,11 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	
 	while(1) {
 		XSleep(100);
+		
+		// dpad up
+		if(pad.wButtons & 0x00000001) {
+			
+		}
 		
 		for(int i = 0; i < freeze_entry_cnt; i++) {
 			*(DWORD*)freeze_entries[i].mapped_addr = freeze_entries[i].val;
