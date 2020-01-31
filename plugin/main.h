@@ -12,6 +12,6 @@
 #include "XbSymbolDatabase/XbSymbolDatabase.h"
 
 #define PHYSICAL_ADDR_BASE	0x00000000
-#define PHYSICAL_ADDR_SIZE	0x03FFFFFF
+#define PHYSICAL_ADDR_SIZE	0x04000000
 
 #endif
