@@ -3,6 +3,49 @@
 int search_step = 0;
 int entries_cnt = 0;
 
+typedef struct {
+	const char* type;
+	bool (*function)(BYTE lhs, BYTE rhs);
+} Comparison;
+
+static bool is_equal(BYTE a, BYTE b) { return a == b; }
+static bool is_not_equal(BYTE a, BYTE b) { return a != b; }
+static bool is_greater(BYTE a, BYTE b) { return a > b; }
+static bool is_less(BYTE a, BYTE b) { return a < b; }
+static bool is_unknown(BYTE a, BYTE b) { return true; }
+
+Comparison start_comparisons[] = {
+	{ "equals", is_equal },
+	{ "not-equals", is_not_equal },
+	{ "greater-than", is_greater },
+	{ "less-than", is_less },
+	{ "unknown", is_unknown },
+};
+
+Comparison cont_comparisons[] = {
+	{ "equals", is_equal },
+	{ "not-equals", is_not_equal },
+	{ "greater-than", is_greater },
+	{ "less-than", is_less },
+};
+
+Comparison cont_unk_comparisons[] = {
+	{ "same", is_equal },
+	{ "different", is_not_equal },
+	{ "greater", is_greater },
+	{ "less", is_less },
+};
+
+bool compare(Comparison *comparisons, BYTE struct_cnt, const char* type, BYTE a, BYTE b) {
+	for(int i = 0; i < struct_cnt; i++) {
+		Comparison* comparison = &comparisons[i];
+		if (strcmp(type, comparison->type) == 0) {
+			return comparison->function(a, b);
+		}
+	}
+	return false;
+}
+
 HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
 	char val_buf[16], condition[16];
 	DWORD val;
@@ -19,44 +62,8 @@ HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PD
 	
 	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
 	
-	if(strcmp(condition, "equals") == 0) {
-		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
-			if(*(DWORD*)(addr+i) == val) {
-				fwrite(&i, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
-				entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "not-equals") == 0) {
-		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
-			if(*(DWORD*)(addr+i) != val) {
-				fwrite(&i, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
-				entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "less-than") == 0) {
-		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
-			if(*(DWORD*)(addr+i) < val) {
-				fwrite(&i, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
-				entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "greater-than") == 0) {
-		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
-			if(*(DWORD*)(addr+i) > val) {
-				fwrite(&i, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
-				entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "unknown") == 0) {
-		for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
+	for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
+		if(compare(start_comparisons, 5, condition, *(DWORD*)(addr+i), val)) {
 			fwrite(&i, sizeof(DWORD), 1, fp);
 			fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
 			entries_cnt++;
@@ -95,116 +102,18 @@ HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp,
 	
 	int new_entries_cnt = 0;
 	
-	if(strcmp(condition, "equals") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) == val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "not-equals") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) != val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "same") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) == prev_val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "different") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) != prev_val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "less-than") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) < val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "more-than") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) > val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "less") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) < prev_val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
-		}
-	}
-	else if(strcmp(condition, "more") == 0) {
-		for(int i = 0; i < entries_cnt; i++) {
-			DWORD prev_addr, prev_val;
-			
-			fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
-			fread(&prev_val, sizeof(DWORD), 1, fprevscan);
-			
-			if(*(DWORD*)(addr + prev_addr) > prev_val) {
-				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-				new_entries_cnt++;
-			}
+	for(int i = 0; i < entries_cnt; i++) {
+		DWORD prev_addr, prev_val;
+		
+		fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
+		fread(&prev_val, sizeof(DWORD), 1, fprevscan);
+		
+		DWORD cur_val = *(DWORD*)(addr + prev_addr);
+		
+		if(compare(cont_comparisons, 4, condition, cur_val, val) || compare(cont_unk_comparisons, 4, condition, cur_val, prev_val)) {
+			fwrite(&prev_addr, sizeof(DWORD), 1, fp);
+			fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
+			new_entries_cnt++;
 		}
 	}
 	
