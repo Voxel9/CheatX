@@ -5,14 +5,14 @@ int entries_cnt = 0;
 
 typedef struct {
 	const char* type;
-	bool (*function)(BYTE lhs, BYTE rhs);
+	bool (*function)(DWORD lhs, DWORD rhs);
 } Comparison;
 
-static bool is_equal(BYTE a, BYTE b) { return a == b; }
-static bool is_not_equal(BYTE a, BYTE b) { return a != b; }
-static bool is_greater(BYTE a, BYTE b) { return a > b; }
-static bool is_less(BYTE a, BYTE b) { return a < b; }
-static bool is_unknown(BYTE a, BYTE b) { return true; }
+static bool is_equal(DWORD a, DWORD b) { return a == b; }
+static bool is_not_equal(DWORD a, DWORD b) { return a != b; }
+static bool is_greater(DWORD a, DWORD b) { return a > b; }
+static bool is_less(DWORD a, DWORD b) { return a < b; }
+static bool is_unknown(DWORD a, DWORD b) { return true; }
 
 Comparison start_comparisons[] = {
 	{ "equals", is_equal },
@@ -36,7 +36,7 @@ Comparison cont_unk_comparisons[] = {
 	{ "less", is_less },
 };
 
-bool compare(Comparison *comparisons, BYTE struct_cnt, const char* type, BYTE a, BYTE b) {
+bool compare(Comparison *comparisons, BYTE struct_cnt, const char* type, DWORD a, DWORD b) {
 	for(int i = 0; i < struct_cnt; i++) {
 		Comparison* comparison = &comparisons[i];
 		if (strcmp(type, comparison->type) == 0) {
