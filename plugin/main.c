@@ -33,6 +33,7 @@ void DxtEntry(ULONG *pfUnload) {
 	DmRegisterCommandProcessor("FREEZEMEM", freeze_memory);
 	DmRegisterCommandProcessor("STARTSEARCH", start_search);
 	DmRegisterCommandProcessor("CONTSEARCH", continue_search);
+	DmRegisterCommandProcessor("CHANGETYPE", change_type);
 	
 	HANDLE handle, id;
 	NTSTATUS status = PsCreateSystemThreadEx(&handle, 0, 8192, 0, &id, (PKSTART_ROUTINE)NULL, (PVOID)NULL, FALSE, FALSE, cheat_thread);

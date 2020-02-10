@@ -3,15 +3,42 @@
 int search_step = 0;
 int entries_cnt = 0;
 
+int val_size = 4;
+bool is_float = false;
+
 typedef struct {
 	const char* type;
 	bool (*function)(DWORD lhs, DWORD rhs);
 } Comparison;
 
-static bool is_equal(DWORD a, DWORD b) { return a == b; }
-static bool is_not_equal(DWORD a, DWORD b) { return a != b; }
-static bool is_greater(DWORD a, DWORD b) { return a > b; }
-static bool is_less(DWORD a, DWORD b) { return a < b; }
+static bool is_equal(DWORD a, DWORD b) {
+	if(is_float)
+		return *((float*)&a) == *((float*)&b);
+	
+	return a == b;
+}
+
+static bool is_not_equal(DWORD a, DWORD b) {
+	if(is_float)
+		return *((float*)&a) != *((float*)&b);
+	
+	return a != b;
+}
+
+static bool is_greater(DWORD a, DWORD b) {
+	if(is_float)
+		return *((float*)&a) > *((float*)&b);
+	
+	return a > b;
+}
+
+static bool is_less(DWORD a, DWORD b) {
+	if(is_float)
+		return *((float*)&a) < *((float*)&b);
+	
+	return a < b;
+}
+
 static bool is_unknown(DWORD a, DWORD b) { return true; }
 
 Comparison start_comparisons[] = {
@@ -62,8 +89,24 @@ HRESULT __stdcall start_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PD
 	
 	PVOID addr = MmMapIoSpace(PHYSICAL_ADDR_BASE, PHYSICAL_ADDR_SIZE, PAGE_READWRITE);
 	
-	for(DWORD i = 0; i < PHYSICAL_ADDR_SIZE; i += 4) {
-		if(compare(start_comparisons, 5, condition, *(DWORD*)(addr+i), val)) {
+	for(int i = 0; i < PHYSICAL_ADDR_SIZE; i += val_size) {
+		if(val_size == 1 && compare(start_comparisons, 5, condition, *(BYTE*)(addr+i), (BYTE)val)) {
+			fwrite(&i, sizeof(DWORD), 1, fp);
+			
+			DWORD write_val = *(BYTE*)(addr+i);
+			fwrite(&write_val, sizeof(DWORD), 1, fp);
+			
+			entries_cnt++;
+		}
+		else if(val_size == 2 && compare(start_comparisons, 5, condition, *(WORD*)(addr+i), (WORD)val)) {
+			fwrite(&i, sizeof(DWORD), 1, fp);
+			
+			DWORD write_val = *(WORD*)(addr+i);
+			fwrite(&write_val, sizeof(DWORD), 1, fp);
+			
+			entries_cnt++;
+		}
+		else if(val_size == 4 && compare(start_comparisons, 5, condition, *(DWORD*)(addr+i), val)) {
 			fwrite(&i, sizeof(DWORD), 1, fp);
 			fwrite((DWORD*)(addr+i), sizeof(DWORD), 1, fp);
 			entries_cnt++;
@@ -108,12 +151,38 @@ HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp,
 		fread(&prev_addr, sizeof(DWORD), 1, fprevscan);
 		fread(&prev_val, sizeof(DWORD), 1, fprevscan);
 		
-		DWORD cur_val = *(DWORD*)(addr + prev_addr);
-		
-		if(compare(cont_comparisons, 4, condition, cur_val, val) || compare(cont_unk_comparisons, 4, condition, cur_val, prev_val)) {
-			fwrite(&prev_addr, sizeof(DWORD), 1, fp);
-			fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
-			new_entries_cnt++;
+		if(val_size == 1) {
+			DWORD cur_val = *(BYTE*)(addr + prev_addr);
+			
+			if(compare(cont_comparisons, 4, condition, cur_val, (BYTE)val) || compare(cont_unk_comparisons, 4, condition, cur_val, prev_val)) {
+				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
+				
+				DWORD write_val = *(BYTE*)(addr + prev_addr);
+				fwrite(&write_val, sizeof(DWORD), 1, fp);
+				
+				new_entries_cnt++;
+			}
+		}
+		else if(val_size == 2) {
+			DWORD cur_val = *(WORD*)(addr + prev_addr);
+			
+			if(compare(cont_comparisons, 4, condition, cur_val, (WORD)val) || compare(cont_unk_comparisons, 4, condition, cur_val, prev_val)) {
+				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
+				
+				DWORD write_val = *(WORD*)(addr + prev_addr);
+				fwrite(&write_val, sizeof(DWORD), 1, fp);
+				
+				new_entries_cnt++;
+			}
+		}
+		else if(val_size == 4) {
+			DWORD cur_val = *(DWORD*)(addr + prev_addr);
+			
+			if(compare(cont_comparisons, 4, condition, cur_val, val) || compare(cont_unk_comparisons, 4, condition, cur_val, prev_val)) {
+				fwrite(&prev_addr, sizeof(DWORD), 1, fp);
+				fwrite((DWORD*)(addr + prev_addr), sizeof(DWORD), 1, fp);
+				new_entries_cnt++;
+			}
 		}
 	}
 	
@@ -127,6 +196,29 @@ HRESULT __stdcall continue_search(LPCSTR szCommand, LPSTR szResp, DWORD cchResp,
 	fclose(fprevscan);
 	
 	search_step++;
+	
+	return XBDM_NOERR;
+}
+
+HRESULT __stdcall change_type(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
+	char type[16];
+	sscanf(szCommand, "changetype! %s", type);
+	
+	is_float = false;
+	
+	if(strcmp(type, "byte") == 0) {
+		val_size = 1;
+	}
+	else if(strcmp(type, "word") == 0) {
+		val_size = 2;
+	}
+	else if(strcmp(type, "dword") == 0) {
+		val_size = 4;
+	}
+	else if(strcmp(type, "float") == 0) {
+		val_size = 4;
+		is_float = true;
+	}
 	
 	return XBDM_NOERR;
 }
