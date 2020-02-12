@@ -3,6 +3,21 @@
 struct freeze_entry *freeze_entries = NULL;
 int freeze_entry_cnt = 0;
 
+void add_freeze_entry(DWORD address, DWORD val) {
+	freeze_entry_cnt++;
+	freeze_entries = realloc(freeze_entries, sizeof(struct freeze_entry) * freeze_entry_cnt);
+	
+	freeze_entries[freeze_entry_cnt-1].physical_addr = address;
+	freeze_entries[freeze_entry_cnt-1].mapped_addr = MmMapIoSpace(address, 4, PAGE_READWRITE);
+	freeze_entries[freeze_entry_cnt-1].val = val;
+}
+
+void apply_freeze_entries() {
+	for(int i = 0; i < freeze_entry_cnt; i++) {
+		*(DWORD*)freeze_entries[i].mapped_addr = freeze_entries[i].val;
+	}
+}
+
 HRESULT __stdcall freeze_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
 	char code_address_buf[16], val_buf[16];
 	DWORD code_address, val;
@@ -12,12 +27,7 @@ HRESULT __stdcall freeze_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, P
 	code_address = strtol(code_address_buf, NULL, 16);
 	val = strtol(val_buf, NULL, 16);
 	
-	freeze_entry_cnt++;
-	freeze_entries = realloc(freeze_entries, sizeof(struct freeze_entry) * freeze_entry_cnt);
-	
-	freeze_entries[freeze_entry_cnt-1].physical_addr = code_address;
-	freeze_entries[freeze_entry_cnt-1].mapped_addr = MmMapIoSpace(code_address, 4, PAGE_READWRITE);
-	freeze_entries[freeze_entry_cnt-1].val = val;
+	add_freeze_entry(code_address, val);
 	
 	return XBDM_NOERR;
 }

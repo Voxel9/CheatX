@@ -6,7 +6,8 @@ SRCS = main.c \
 	XbSymbolDatabase/XbSymbolDatabase.c \
 	memfuncs.c \
 	searchfuncs.c \
-	inputhook.c
+	inputhook.c \
+	txtcodes.c
 
 DEBUG = n
 

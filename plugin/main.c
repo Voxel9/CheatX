@@ -3,6 +3,7 @@
 #include "memfuncs.h"
 #include "searchfuncs.h"
 #include "inputhook.h"
+#include "txtcodes.h"
 
 int main() { (void)KeTickCount; return 0; }
 
@@ -12,6 +13,7 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	
 	LocateGetStateFunc();
 	InstallGetStateHook();
+	LoadCodesFromFile();
 	
 	while(1) {
 		XSleep(100);
@@ -21,9 +23,7 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 			
 		}
 		
-		for(int i = 0; i < freeze_entry_cnt; i++) {
-			*(DWORD*)freeze_entries[i].mapped_addr = freeze_entries[i].val;
-		}
+		apply_freeze_entries();
 	}
 }
 
