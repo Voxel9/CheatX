@@ -1,5 +1,4 @@
 [Return to table of contents](../README.md)
----
 
 # Commands Usage
 

@@ -1,5 +1,4 @@
 [Return to table of contents](../README.md)
----
 
 ## Usage
 CheatX communicates over telnet, meaning you can use a telnet CLI to interact with the plugin.

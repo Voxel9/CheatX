@@ -1,5 +1,4 @@
 [Return to table of contents](../README.md)
----
 
 ## Loading codes via a .txt file
 Like most cheat plugins for consoles, CheatX supports loading codes via a .txt file.

@@ -1,6 +1,3 @@
-[Return to repo homepage](../)
----
-
 # CheatX Documentation
 
 ## Table of contents

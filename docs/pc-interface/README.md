@@ -1,5 +1,4 @@
 [Return to table of contents](../README.md)
----
 
 ## (Unimplemented) PC interface
 Currently there's not yet a PC interface that allows for more rapid development of cheats and memory exploration.

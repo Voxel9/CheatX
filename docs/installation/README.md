@@ -1,5 +1,4 @@
 [Return to table of contents](../README.md)
----
 
 ## Installation
 The plugin is provided in DXT format, meaning you'll need a debug bios to load it.
