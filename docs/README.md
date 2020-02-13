@@ -2,15 +2,15 @@
 
 ## Table of contents
 ### Setup
-[Installation](docs/installation/README.md)
+[Installation](installation/README.md)
 
-[Building](docs/building/README.md)
+[Building](building/README.md)
 
-[Usage](docs/usage/README.md)
+[Usage](usage/README.md)
 
 ### Features
-[Plugin Commands](docs/commands/README.md)
+[Plugin Commands](commands/README.md)
 
-[Code loading via .txt files](docs/txtcodes/README.md)
+[Code loading via .txt files](txtcodes/README.md)
 
-[PC interface](docs/pc-interface/README.md)
+[PC interface](pc-interface/README.md)
