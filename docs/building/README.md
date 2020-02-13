@@ -1,3 +1,6 @@
+[Return to table of contents](../README.md)
+---
+
 ## Building
 For those who wish to help out, I'm specifically using JayFoxRox's [dxt branch](https://github.com/JayFoxRox/nxdk/tree/dxt) of nxdk, as building DXTs is not yet supported in mainline nxdk. Just [follow the setup guide](https://github.com/JayFoxRox/nxdk/tree/dxt#getting-started).
 
