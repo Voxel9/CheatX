@@ -1,6 +1,0 @@
-image:
-  - Ubuntu
-
-before_build:
-  - cmd: |-
-      git submodule update --init --recursive
