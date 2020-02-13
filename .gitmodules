@@ -1,3 +1,7 @@
 [submodule "plugin/XbSymbolDatabase"]
 	path = plugin/XbSymbolDatabase
 	url = https://github.com/Voxel9/XbSymbolDatabase
+[submodule "plugin/nxdk"]
+	path = plugin/nxdk
+	url = https://github.com/JayFoxRox/nxdk.git
+	branch = dxt

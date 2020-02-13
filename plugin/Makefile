@@ -1,4 +1,4 @@
-NXDK_DIR = $(CURDIR)/../../nxdk
+NXDK_DIR = $(CURDIR)/nxdk
 
 DXT_TITLE = CheatX
 
