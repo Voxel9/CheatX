@@ -17,5 +17,5 @@ jobs:
     - name: build CheatX
       working-directory: ./plugin
       run: |
-        export PATH=$PATH:/usr/lib/llvm-6.0/bin
+        export PATH=$PATH:/usr/lib/llvm-9/bin
         make
