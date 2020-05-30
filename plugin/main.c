@@ -11,7 +11,6 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 	// Temp sleep to ensure XBE gets fully loaded before scan
 	XSleep(1000);
 	
-	LocateGetStateFunc();
 	InstallGetStateHook();
 	LoadCodesFromFile();
 	

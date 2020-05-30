@@ -1,19 +1,26 @@
 #include "inputhook.h"
 
-// CheatX hooked input state
+#include "XbSymbolDatabase/XbSymbolDatabase.h"
+
+// CheatX hooked xinput state
 XINPUT_GAMEPAD pad;
 
-uint32_t getstate_raw = 0;
-BYTE oldBytes[6] = {0};
-BYTE JMP[6] = {0};
+uint32_t Addr_XInputGetState = 0;
+BYTE old_bytes[6];
+BYTE jump_hook[6] = {0xE9, 0x90, 0x90, 0x90, 0x90, 0xC3};
 
 DWORD WINAPI Hook_XInputGetState(HANDLE hDevice, PXINPUT_STATE pState) {
-	DWORD WINAPI (*Loc_XInputGetState)(HANDLE, PXINPUT_STATE) = (PVOID)getstate_raw;
+    // Restore original bytes to beginning of function
+	memcpy((PVOID)Addr_XInputGetState, old_bytes, 6);
+    
+    // Execute the original function
+    DWORD WINAPI (*Call_XInputGetState)(HANDLE, PXINPUT_STATE) = (PVOID)Addr_XInputGetState;
+	DWORD ret = Call_XInputGetState(hDevice, pState);
+    
+    // Restore jump hook
+	memcpy((PVOID)Addr_XInputGetState, jump_hook, 6);
 	
-	memcpy((PVOID)getstate_raw, oldBytes, 6);
-	DWORD ret = Loc_XInputGetState(hDevice, pState);
-	memcpy((PVOID)getstate_raw, JMP, 6);
-	
+    // Obtain gamepad state for reading in CheatX
 	memcpy(&pad, &pState->Gamepad, sizeof(XINPUT_GAMEPAD));
 	
 	return ret;
@@ -37,48 +44,21 @@ VOID CDECL scanned_func(const char* library_str, uint32_t library_flag, const ch
 	// End Debug Stuff
 	
 	if(strcmp("XInputGetState", symbol_str) == 0) {
-		getstate_raw = func_addr;
+		Addr_XInputGetState = func_addr;
 	}
-}
-
-VOID LocateGetStateFunc() {
-	XbSDBLibraryHeader lib_header;
-	XbSDBSectionHeader sec_header;
-	
-	lib_header.count = XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, NULL);
-	sec_header.count = XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, NULL, false);
-	
-	lib_header.filters = malloc(lib_header.count * sizeof(XbSDBLibrary));
-	sec_header.filters = malloc(sec_header.count * sizeof(XbSDBSection));
-	
-	XbSymbolDatabase_GenerateLibraryFilter((PVOID)0x00010000, &lib_header);
-	XbSymbolDatabase_GenerateSectionFilter((PVOID)0x00010000, &sec_header, false);
-	
-	uint32_t thunk_addr = XbSymbolDatabase_GetKernelThunkAddress((PVOID)0x00010000);
-	XbSymbolContextHandle xapi_handle;
-	
-	if(!XbSymbolDatabase_CreateXbSymbolContext(&xapi_handle, scanned_func, lib_header, sec_header, thunk_addr)) {
-		XReboot();
-	}
-	
-	XbSymbolContext_ScanManual(xapi_handle);
-	
-	XbSymbolContext_ScanLibrary(xapi_handle, lib_header.filters, true);
-	
-	XbSymbolContext_RegisterXRefs(xapi_handle);
-	
-	XbSymbolContext_Release(xapi_handle);
-	
-	free(sec_header.filters);
-	free(lib_header.filters);
 }
 
 VOID InstallGetStateHook() {
-	BYTE tempJMP[6] = {0xE9, 0x90, 0x90, 0x90, 0x90, 0xC3};
-	
-	memcpy(JMP, tempJMP, 6);
-	DWORD JMPSize = ((DWORD)Hook_XInputGetState - getstate_raw - 5);
-	memcpy(oldBytes, (PVOID)getstate_raw, 6);
-	memcpy(&JMP[1], &JMPSize, 4);
-	memcpy((PVOID)getstate_raw, JMP, 6);
+    // Scan for XInputGetState location first
+    XbSymbolScan((PVOID)0x00010000, scanned_func, false);
+    
+    // Store first 6 original bytes where jump will be written
+	memcpy(old_bytes, (PVOID)Addr_XInputGetState, 6);
+    
+    // Calculate relative jump size and overwrite NOP bytes with the value
+    DWORD jump_size = ((DWORD)Hook_XInputGetState - Addr_XInputGetState - 5);
+	memcpy(&jump_hook[1], &jump_size, 4);
+    
+    // Finally, write jump instruction to beginning of XInputGetState
+	memcpy((PVOID)Addr_XInputGetState, jump_hook, 6);
 }

@@ -25,7 +25,6 @@ typedef struct _XINPUT_STATE {
 
 extern XINPUT_GAMEPAD pad;
 
-VOID LocateGetStateFunc();
 VOID InstallGetStateHook();
 
 #endif
