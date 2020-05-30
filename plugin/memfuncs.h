@@ -4,9 +4,9 @@
 #include "main.h"
 
 struct freeze_entry {
-	DWORD physical_addr;
-	PVOID mapped_addr;
-	DWORD val;
+    DWORD physical_addr;
+    PVOID mapped_addr;
+    DWORD val;
 };
 
 void add_freeze_entry(DWORD address, DWORD val);
