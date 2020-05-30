@@ -10,14 +10,14 @@ jobs:
       with:
         submodules: recursive
     - name: install deps
-      run: sudo apt-get update -y && sudo apt-get install -y flex bison clang-9 lld
+      run: sudo apt-get update -y && sudo apt-get install -y flex bison clang-8 lld-8
     - name: build cdxt
       working-directory: ./plugin/nxdk/tools/cxbe
       run: make
     - name: build CheatX
       working-directory: ./plugin
       run: |
-        export PATH=$PATH:/usr/lib/llvm-9/bin
+        export PATH=$PATH:/usr/lib/llvm-8/bin
         make
     - name: upload artifacts
       uses: actions/upload-artifact@v1
