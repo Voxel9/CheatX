@@ -8,4 +8,4 @@ Refer to the [documentation](https://voxel9.github.io/CheatX/) for more informat
 
 ## Download
 You can grab the latest build on AppVeyor [HERE](https://ci.appveyor.com/project/Voxel9/cheatx/branch/master/artifacts).  
-Please note that CheatX is still work-in-progress.
+Please note that CheatX is still work-in-progress.  
