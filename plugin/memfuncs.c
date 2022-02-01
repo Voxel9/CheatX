@@ -32,6 +32,23 @@ HRESULT __stdcall freeze_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, P
     return XBDM_NOERR;
 }
 
+HRESULT __stdcall peek_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
+    char code_address_buf[16];
+    DWORD code_address;
+
+    sscanf(szCommand, "peekmem! %s", code_address_buf);
+
+    code_address = strtol(code_address_buf, NULL, 16);
+
+    PVOID addr = MmMapIoSpace(code_address, 4, PAGE_READWRITE);
+
+    sprintf(szResp, "%08X", *(DWORD*)addr);
+
+    MmUnmapIoSpace(addr, 4);
+
+    return XBDM_NOERR;
+}
+
 HRESULT __stdcall poke_memory(LPCSTR szCommand, LPSTR szResp, DWORD cchResp, PDM_CMDCONT pdmcc) {
     char code_address_buf[16], val_buf[16];
     DWORD code_address, val;
