@@ -28,6 +28,7 @@ static VOID NTAPI cheat_thread(PKSTART_ROUTINE StartRoutine, PVOID StartContext)
 
 void DxtEntry(ULONG *pfUnload) {
     DmRegisterCommandProcessor("DUMPMEM", dump_memory);
+    DmRegisterCommandProcessor("PEEKMEM", peek_memory);
     DmRegisterCommandProcessor("POKEMEM", poke_memory);
     DmRegisterCommandProcessor("FREEZEMEM", freeze_memory);
     DmRegisterCommandProcessor("STARTSEARCH", start_search);

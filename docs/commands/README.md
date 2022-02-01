@@ -5,6 +5,7 @@
 | Command | Description |
 | ------- | ----------- |
 | **dumpmem!** | Dumps the whole 64MB physical memory map to `E:\DEVKIT\dxt\memdump.bin` |
+| **peekmem!** _addr_ | Reads a DWORD (4 bytes) from the specified address. |
 | **pokemem!** _addr value_ | Writes a specified DWORD (4 bytes) to the specified address. |
 | **freezemem!** _addr value_ | Same as pokemem, but instead freezes the specified address with the written value. |
 | **startsearch!** _equals/not-equals/less-than/greater-than/unknown value_ | Begins a conditional or unknown search for memory values. Restarts any existing search. |
